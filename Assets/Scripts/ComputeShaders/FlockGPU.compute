@@ -1,0 +1,198 @@
+/*
+ * First version of GPU-implemented Flock behavior. Rules applied are the 3 basic ones:
+ * - Avoidance between flock agents
+ * - Cohesion between neighbours
+ * - Alignment of movement direction 
+ */
+
+// ENABLE ONLY FOR DEBUG
+#pragma enable_d3d11_debug_symbols
+
+#pragma kernel k_KeepPosition
+#pragma kernel k_UpdatePosition
+
+#define FLT_MAX 3.402823466e+38
+#define DIM 1
+#define THREADS_FOR_DIM 64
+#define THREADS_FOR_GROUP pow(THREADS_FOR_DIM, DIM)
+
+#define PARAM_ID_ACTIVE 0
+#define PARAM_ID_WEIGHT 1
+#define PARAM_ID_RADIUS 2
+
+// --- GLOBAL MEM. VARIABLES ---
+float time;             //May be removed
+float delta_time;
+
+uint num_agents;
+float agent_size_radius;
+float agent_view_range;
+float agent_fov;
+
+float3 flock_center;
+float flock_radius;     // May be removed
+float drive_factor;
+
+float3 avoidance_params;
+float2 cohesion_params;
+float2 alignment_params;
+float3 bounding_sphere_params;
+
+// --- BUFFERS ---
+RWStructuredBuffer<float3> agent_positions;
+RWStructuredBuffer<float3> agent_velocities;
+
+RWStructuredBuffer<float> debug_distances;
+
+// --- FUNCTIONS ---
+
+void SetPosition (uint globalIndex, float3 position)
+{
+    if (globalIndex < num_agents) {
+        agent_positions[globalIndex] = position;
+    }
+}
+
+void SetVelocity (uint globalIndex, float3 velocity)
+{
+    if (globalIndex < num_agents) {
+        agent_velocities[globalIndex] = velocity;
+    }
+}
+
+void KeepPosition(uint globalIndex)
+{
+    SetPosition(globalIndex, agent_positions[globalIndex]);
+}
+
+// --- KERNELS ---
+[numthreads(THREADS_FOR_DIM, 1, 1)]
+void k_KeepPosition (
+    uint3 t_id : SV_DispatchThreadID,       // Global Thread Index (in the complete computational space)
+    uint3 g_id : SV_GroupID,                // Group Index (on which group this thread is running)
+    uint3 gt_id : SV_GroupThreadID,         // Group Thread Index (index within the single group)
+    uint flattened_g_id : SV_GroupIndex)    // Flattened Group Index (SV_GroupIndex = SV_GroupThreadID.z*dimx*dimy + SV_GroupThreadID.y*dimx + SV_GroupThreadID.x)
+{
+    // Calculate global flattened thread index in the complete computational space.
+    // NOTE: this works for 1-DIMENSIONAL GROUP DISPATCH
+    const uint global_flattened_t_id = flattened_g_id + g_id.x*THREADS_FOR_GROUP;
+
+    KeepPosition(global_flattened_t_id);
+}
+
+[numthreads(THREADS_FOR_DIM, 1, 1)]
+void k_UpdatePosition (
+    uint3 t_id : SV_DispatchThreadID,       // Global Thread Index (in the complete computational space)
+    uint3 g_id : SV_GroupID,                // Group Index (on which group this thread is running)
+    uint3 gt_id : SV_GroupThreadID,         // Group Thread Index (index within the single group)
+    uint flattened_g_id : SV_GroupIndex)    // Flattened Group Index (SV_GroupIndex = SV_GroupThreadID.z*dimx*dimy + SV_GroupThreadID.y*dimx + SV_GroupThreadID.x)
+{
+    // Calculate global flattened thread index in the complete computational space.
+    const uint global_flattened_t_id = flattened_g_id + g_id.x*THREADS_FOR_GROUP;   // NOTE: this works for 1-DIMENSIONAL GROUP DISPATCH
+    
+    float3 current_position = agent_positions[global_flattened_t_id];
+    float3 current_velocity = agent_velocities[global_flattened_t_id];
+    float3 distance_vector;
+    float3 distance_dir;
+    float distance_magnitude;
+    
+    float3 avoidance_move = 0;
+    float n_avoid = 0;
+
+    float3 cohesion_move = 0;
+    float n_cohesion = 0;
+
+    float3 alignment_move = 0;
+    float neighbour_velocity_magnitude;
+    float n_alignment = 0;
+
+    for(uint i=0; i<num_agents; i++)
+    {
+        if(i==global_flattened_t_id)    // Skip if the i-th agent is the one controlled by this thread
+            continue;
+        
+        // Calculate distance
+        distance_vector = agent_positions[i] - current_position;
+        distance_magnitude = length(distance_vector);
+        distance_dir = normalize(distance_vector);
+
+        // TODO: Debug calculation of angle between and angle comparison.
+        // PROBLEM when current velocity is 0. To correctly implement this, i'd have to keep track of the FORWARD VECTOR, not only velocity.
+        // float cos_angle_between = dot(current_velocity, distance_vector)/(length(current_velocity)*distance_magnitude);
+        
+        distance_magnitude -= 2*agent_size_radius;
+        if(distance_magnitude<=0.01f) distance_magnitude = 0.01f;  //Avoid negative distance: if meshes com-penetrate, distance is 0 anyway 
+
+        if( distance_magnitude < agent_view_range             // If the i-th agent is within the view range both in distance
+            //&& cos_angle_between < cos(agent_fov/2.0f)      // and field of view:
+            )       
+        {
+            //debug_distances[global_flattened_t_id] = distance_magnitude;
+            
+            // Calculate Avoidance move
+            if(avoidance_params[PARAM_ID_ACTIVE] && distance_magnitude < avoidance_params[PARAM_ID_RADIUS])
+            {
+                n_avoid++;
+                // Hook Law - like
+                avoidance_move += -10*(avoidance_params[PARAM_ID_RADIUS]-distance_magnitude) * distance_dir;
+            }
+
+            // Calculate Cohesion move
+            if(cohesion_params[PARAM_ID_ACTIVE] && distance_magnitude > 0.01f)
+            {
+                n_cohesion++;
+                cohesion_move += distance_magnitude*distance_dir;
+            }
+
+            // Calculate Alignment move
+            if(alignment_params[PARAM_ID_ACTIVE])
+            {
+                neighbour_velocity_magnitude = length(agent_velocities[i]);
+                if(neighbour_velocity_magnitude > 0.0f)
+                {
+                    n_alignment++;
+                    alignment_move += agent_velocities[i]/neighbour_velocity_magnitude*drive_factor;
+                }
+            }
+            
+            // Other rules...
+        }
+    }
+
+    // Calculate Bounding Sphere move
+    float3 bounding_sphere_move = 0;
+    distance_vector = current_position - flock_center;
+    distance_magnitude = length(distance_vector);
+    if(bounding_sphere_params[PARAM_ID_ACTIVE]
+        && distance_magnitude > bounding_sphere_params[PARAM_ID_RADIUS])
+    {
+        // Hook Law - like
+        bounding_sphere_move = 10*(bounding_sphere_params[PARAM_ID_RADIUS]-distance_magnitude)*normalize(distance_vector);
+    }
+
+    // Normalize moves
+    //if(n_avoid > 0) avoidance_move/=n_avoid;
+    if(n_cohesion > 0) cohesion_move/=n_cohesion;
+    if(n_alignment > 0) alignment_move/=n_alignment;
+
+    // Sum all behaviours weights
+    const float weights_sum = avoidance_params[PARAM_ID_WEIGHT] +
+        cohesion_params[PARAM_ID_WEIGHT] +
+            alignment_params[PARAM_ID_WEIGHT] +
+                bounding_sphere_params[PARAM_ID_WEIGHT];  
+
+    // Calculate weighted sum of all movement vectors
+    const float3 tot_move = (
+        avoidance_move * avoidance_params[PARAM_ID_WEIGHT] +
+        cohesion_move * cohesion_params[PARAM_ID_WEIGHT] +
+        alignment_move * alignment_params[PARAM_ID_WEIGHT] +
+        bounding_sphere_move * bounding_sphere_params[PARAM_ID_WEIGHT]
+        )/weights_sum;
+    
+    // Update position and velocity
+    const float3 new_velocity = tot_move;
+    SetVelocity(global_flattened_t_id, new_velocity);
+    SetPosition(global_flattened_t_id, current_position + new_velocity*delta_time);
+}
+
+
