@@ -1,3 +1,8 @@
+/*
+ * Credits: Catlike Coding
+ * https://catlikecoding.com/unity/tutorials/basics/compute-shaders/
+ */
+
 #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
 	StructuredBuffer<float3> _Positions;
 #endif

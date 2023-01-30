@@ -11241,30 +11241,30 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   flock:
-    flockRadius: 100
-    origin: {fileID: 1546018745}
-    numAgents: 400
+    flockRadius: 150
+    origin: {fileID: 242963783}
+    numAgents: 100
     driveFactor: 100
     agentViewRange: 3
     avoidanceParameters:
       active: 1
-      weight: 17
-      radius: 1
+      weight: 16.5
+      radius: 3.51
     cohesionParameters:
       active: 1
-      weight: 24
+      weight: 3.8
       radius: 3
     alignmentParameters:
       active: 1
-      weight: 33
+      weight: 23.2
       radius: 3
     boundingSphereParameters:
       active: 1
-      weight: 26
-      radius: 50
+      weight: 4.7
+      radius: 100
     agentMesh: {fileID: 738721038751157308, guid: 862cbc07c2de6984db8155b9abc1e298,
       type: 3}
-    agentMaterial: {fileID: 2100000, guid: f6ffe2f89a86a39429526c5c8fc69cf3, type: 2}
+    agentMaterial: {fileID: 2100000, guid: 83369a0546577d849aaa33976062d849, type: 2}
     agentScale: 1
 --- !u!4 &1546018745
 Transform:
