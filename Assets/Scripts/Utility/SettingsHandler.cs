@@ -1,7 +1,5 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 public class SettingsHandler : MonoBehaviour
 {
@@ -11,6 +9,7 @@ public class SettingsHandler : MonoBehaviour
 
     private void Awake()
     {
+        Profiler.maxUsedMemory = 1073741824;
         QualitySettings.vSyncCount = vSync ? 1 : 0;
         Application.targetFrameRate = 600;
         Screen.SetResolution(resolution.x, resolution.y, fullScreen);
