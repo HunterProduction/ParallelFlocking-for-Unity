@@ -1,7 +1,5 @@
 
 using UnityEngine;
-using UnityEngine.Serialization;
-using UnityEngine.InputSystem;
 
 public class FPSMouseLook : MonoBehaviour
 {

@@ -1,9 +1,5 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 public class UIFlockSettings : MonoBehaviour
@@ -48,6 +44,12 @@ public class UIFlockSettings : MonoBehaviour
         });
         InitializeUIFields();
         SubscribeAllUIFields();
+        simController.onHandlerChanged.AddListener(() =>
+        {
+            UnsubscribeAllUIFields();
+            InitializeUIFields();
+            SubscribeAllUIFields();
+        });
     }
 
     private void OnDisable()
@@ -61,6 +63,12 @@ public class UIFlockSettings : MonoBehaviour
         {
             numAgents.interactable = true;
             flockRadius.interactable = true;
+        });
+        simController.onHandlerChanged.RemoveListener(() =>
+        {
+            UnsubscribeAllUIFields();
+            InitializeUIFields();
+            SubscribeAllUIFields();
         });
         UnsubscribeAllUIFields();
     }
