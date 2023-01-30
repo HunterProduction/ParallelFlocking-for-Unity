@@ -1,8 +1,8 @@
 #pragma kernel CSMain
 
 #define DIM 2
-#define THREADS_FOR_DIM 8
-#define THREADS_FOR_GROUP pow(THREADS_FOR_DIM, DIM)
+#define THREADS_PER_DIM 8
+#define THREADS_PER_GROUP pow(THREADS_FOR_DIM, DIM)
 
 float _Time;
 float _Speed;
@@ -17,14 +17,14 @@ void SetPosition (uint index, float3 position) {
 }
 
 // KERNEL
-[numthreads(THREADS_FOR_DIM, THREADS_FOR_DIM, 1)]
+[numthreads(THREADS_PER_DIM, THREADS_PER_DIM, 1)]
 void CSMain (
     uint3 t_id : SV_DispatchThreadID,   // Global Thread Index (in the complete computational space)
     uint3 g_id : SV_GroupID,            // Group Index (on which group this thread is running)
     uint3 gt_id : SV_GroupThreadID,     // Group Thread Index (index within the single group)
     uint flattened_g_id : SV_GroupIndex)        // Flattened Group Index (SV_GroupIndex = SV_GroupThreadID.z*dimx*dimy + SV_GroupThreadID.y*dimx + SV_GroupThreadID.x)
 {
-    const uint global_flattened_t_id = flattened_g_id + g_id.x*THREADS_FOR_GROUP;
+    const uint global_flattened_t_id = flattened_g_id + g_id.x*THREADS_PER_GROUP;
     
     float3 pos = float3(gt_id.x, gt_id.y, g_id.x);
     pos += float3(1,0,0)*_Speed*_Time;

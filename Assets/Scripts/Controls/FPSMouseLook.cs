@@ -1,7 +1,4 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using Unity.VisualScripting;
+
 using UnityEngine;
 using UnityEngine.Serialization;
 using UnityEngine.InputSystem;
@@ -9,13 +6,14 @@ using UnityEngine.InputSystem;
 public class FPSMouseLook : MonoBehaviour
 {
     [SerializeField] private Camera mainCamera;
-    public bool lockMouseMovement;
-    [SerializeField] private float sensitivity=50f;
+    [SerializeField] private float sensitivity = 50f;
     [SerializeField] private Vector2 axisSensWeight = Vector2.one;
     [Range(0,1)]
     [SerializeField] private float smoothness = 0f;
     [Range(0,90)]
     [SerializeField] private int upDownRange=90;
+
+    public bool lockLook;
 
     private SimulationControls _controls;
     private Vector2 _rotation, _mouseDelta, _smoothMouseDelta;
@@ -30,6 +28,8 @@ public class FPSMouseLook : MonoBehaviour
         {
             Debug.LogWarning("FPSMouseLook: MainCamera not set.");
         }
+        
+        
     }
 
     private void OnEnable()
@@ -46,6 +46,8 @@ public class FPSMouseLook : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if(lockLook)
+            return;
         _mouseDelta = _controls.Looking.Look.ReadValue<Vector2>() * (sensitivity*axisSensWeight);
         _mouseDelta.y = -_mouseDelta.y;
         
