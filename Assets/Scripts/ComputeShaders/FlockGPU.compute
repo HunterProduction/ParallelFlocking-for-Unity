@@ -1,8 +1,11 @@
-/*
+/* © Mattia Cacciatore - HunterProduction
+ * 
  * First version of GPU-implemented Flock behavior. Rules applied are the 3 basic ones:
  * - Avoidance between flock agents
  * - Cohesion between neighbours
- * - Alignment of movement direction 
+ * - Alignment of movement direction
+ * and a custom one:
+ * - Keep inside a Bounding Sphere
  */
 
 // ENABLE ONLY FOR DEBUG
