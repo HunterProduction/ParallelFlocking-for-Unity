@@ -6,7 +6,7 @@ A Unity Engine implementation using Compute Shaders
 
 ParallelFlocking is a Unity Engine project in which I tried to implement a Flocking algorithm using ComputeShaders, in order to parallelize computations thanks to the power of a GPU.
 
-[Here](https://www.canva.com/design/DAFYyBWMAJY/hibabGEq0_6W9Ez2Cc1kAA/view?utm_content=DAFYyBWMAJY&utm_campaign=designshare&utm_medium=link&utm_source=publishsharelink) you can read a presentation in which I show a more in-depth look at the work I've done.
+[Here](https://www.canva.com/design/DAFYyBWMAJY/kEW0XcMe7QWvfLMz-85pqw/view?utm_content=DAFYyBWMAJY&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=hff7be9761a) you can read a presentation in which I show a more in-depth look at the work I've done.
 
 ### Dependencies
 
